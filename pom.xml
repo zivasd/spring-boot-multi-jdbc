@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.ziva.springboot</groupId>
+	<artifactId>spring-boot-multi-jdbc</artifactId>
+	<version>1.0.0</version>
+	<name>SpringBoot Multiple Jdbc</name>
+	<description>Provide automatic configuration of multiple data sources for Springboot</description>
+	<url>https://github.com/zivasd/spring-boot-multi-jdbc</url>
+
+	<packaging>jar</packaging>
+
+	<properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<springboot.version>2.7.18</springboot.version>
+	</properties>
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-jdbc</artifactId>
+			<version>${springboot.version}</version>
+			<scope>provided</scope>
+		</dependency>
+	</dependencies>
+
+	<issueManagement>
+		<system>Github Issue</system>
+		<url>https://github.com/zivasd/spring-boot-multi-jdbc/issues</url>
+	</issueManagement>
+
+	<licenses>
+		<license>
+			<name>Mulan Permissive Software License，Version 2</name>
+			<url>https://license.coscl.org.cn/MulanPSL2</url>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<name>ziva</name>
+			<email>ziva.sd@gmail.com</email>
+		</developer>
+	</developers>
+
+	<scm>
+		<connection>scm:git@github.com:zivasd/spring-boot-multi-jdbc.git</connection>
+		<developerConnection>scm:git@github.com:zivasd/spring-boot-multi-jdbc.git</developerConnection>
+		<url>git@github.com:dromara/hutool.git</url>
+	</scm>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>3.3.0</version>
+				<configuration>
+					<archive>
+						<index>true</index>
+						<manifest>
+							<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+						</manifest>
+						<manifestEntries>
+							<Build-OS>${os.name}</Build-OS>
+							<Built-By>${user.name}</Built-By>
+							<Build-Jdk>${java.version}</Build-Jdk>
+							<Build-Timestamp>${maven.build.timestamp}</Build-Timestamp>
+						</manifestEntries>
+					</archive>
+				</configuration>
+			</plugin>			
+		</plugins>
+	</build>
+</project>
