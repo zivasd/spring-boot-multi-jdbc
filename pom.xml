@@ -89,6 +89,7 @@
                 <executions>
                     <execution>
 						<id>attach-javadocs</id>
+                        <phase>package</phase>
                         <goals>
                             <goal>jar</goal>
                         </goals>
@@ -108,6 +109,7 @@
 				<executions>
 					<execution>
 						<id>attach-sources</id>
+                        <phase>package</phase>
 						<goals>
 							<goal>jar-no-fork</goal>
 						</goals>
@@ -117,7 +119,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-gpg-plugin</artifactId>
-				<version>1.5</version>
+				<version>3.1.0</version>
 				<executions>
 					<execution>
 						<id>sign-artifacts</id>
