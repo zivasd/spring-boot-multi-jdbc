@@ -1,10 +1,12 @@
-package com.ziva.spring.boot.jdbc.cfg;
+package io.github.zivasd.spring.boot.jdbc.cfg;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import javax.sql.DataSource;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -27,10 +29,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
-@Component("com.ziva.spring.boot.jdbc.cfg.DataSourceBeansBuilder")
-@ComponentScan({ "com.ziva.spring.boot.jdbc.cfg" })
+@Component("io.github.zivasd.spring.boot.jdbc.cfg.DataSourceBeansBuilder")
+@ComponentScan({ "io.github.zivasd.spring.boot.jdbc.cfg" })
 public class DataSourceBeansBuilder
         implements BeanDefinitionRegistryPostProcessor, EnvironmentAware, ApplicationContextAware {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(DataSourceBeansBuilder.class);
 
     private Map<String, DataSourceProperties> dataSources;
     private Environment environment;
@@ -53,9 +57,11 @@ public class DataSourceBeansBuilder
         registry.removeBeanDefinition("WillRemovedTempJdbcTemplate");
         boolean primary = true;
         for (Map.Entry<String, DataSourceProperties> entry : dataSources.entrySet()) {
-            registerDataSourcePropertiesBeanDefinition(registry, entry.getKey(), primary);
-            registerDataSource(registry, entry.getKey(), primary);
-            registerJdbcTemplate(registry, entry.getKey(), primary);
+            String unitName = entry.getKey();
+            LOGGER.info("Initialized DataSource: {}.", unitName + "DataSource");
+            registerDataSourcePropertiesBeanDefinition(registry, unitName, primary);
+            registerDataSource(registry, unitName, primary);
+            registerJdbcTemplate(registry, unitName, primary);
             primary = false;
         }
     }

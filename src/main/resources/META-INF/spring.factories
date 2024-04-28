@@ -1,2 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  com.ziva.spring.boot.jdbc.cfg.DataSourceBeansBuilder
+  io.github.zivasd.spring.boot.jdbc.cfg.DataSourceBeansBuilder

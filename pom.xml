@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>io.github.zivasd</groupId>
 	<artifactId>spring-boot-multi-jdbc</artifactId>
-	<version>1.0.2</version>
+	<version>1.0.3</version>
 	<name>SpringBoot Multiple Jdbc</name>
 	<description>Provide automatic configuration of multiple data sources for Springboot</description>
 	<url>https://github.com/zivasd/spring-boot-multi-jdbc</url>
