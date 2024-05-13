@@ -22,6 +22,8 @@ spring:
       url: ${jdbc connection rul}
       username: ${username}
       password: ${password}
+      initialization-sql:
+        # ... see org.springframework.boot.autoconfigure.sql.init.SqlInitializationProperties
       c3p0:
         initialPoolSize: 3
         minPoolSize: 5

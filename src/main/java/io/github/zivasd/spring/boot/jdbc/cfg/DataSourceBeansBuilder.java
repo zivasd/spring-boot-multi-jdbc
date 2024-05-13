@@ -14,23 +14,33 @@ import org.springframework.beans.factory.config.ConstructorArgumentValues;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.beans.factory.support.GenericBeanDefinition;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
+import org.springframework.boot.autoconfigure.sql.init.SqlDataSourceScriptDatabaseInitializer;
+import org.springframework.boot.autoconfigure.sql.init.SqlInitializationProperties;
 import org.springframework.boot.context.properties.bind.BindResult;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.SimpleDriverDataSource;
 import org.springframework.lang.NonNull;
-import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
-@Component("io.github.zivasd.spring.boot.jdbc.cfg.DataSourceBeansBuilder")
+@AutoConfiguration(value = "io.github.zivasd.spring.boot.jdbc.cfg.DataSourceBeansBuilder", before = {
+        DataSourceAutoConfiguration.class })
 @ComponentScan({ "io.github.zivasd.spring.boot.jdbc.cfg" })
+@ConditionalOnClass({ DataSource.class, JdbcTemplate.class })
+@ConditionalOnMissingBean(value = { DataSource.class, JdbcTemplate.class }, type = "io.r2dbc.spi.ConnectionFactory")
 public class DataSourceBeansBuilder
         implements BeanDefinitionRegistryPostProcessor, EnvironmentAware, ApplicationContextAware {
 
@@ -47,38 +57,72 @@ public class DataSourceBeansBuilder
 
     @Override
     public void postProcessBeanDefinitionRegistry(@NonNull BeanDefinitionRegistry registry) throws BeansException {
+        registry.removeBeanDefinition("WillRemovedTempJdbcTemplate");
+        registry.removeBeanDefinition("WillRemovedTempDataSource");
+        registry.removeBeanDefinition("WillRemovedTempDataSourceScriptDatabaseInitializer");
+
+        if (applicationContext.getBeanNamesForType(DataSource.class).length > 0) {
+            return;
+        }
+
         Binder binder = Binder.get(environment);
-        dataSources = binder
-                .bind("spring.datasources", Bindable.mapOf(String.class, DataSourceProperties.class)).get();
+        BindResult<Map<String, DataSourceProperties>> bindResult = binder
+                .bind("spring.datasources", Bindable.mapOf(String.class, DataSourceProperties.class));
+        if (!bindResult.isBound()) {
+            LOGGER.warn(
+                    "Cannot find any datasource. You should remove this dependency or add at least one datasource in spring.datasources.");
+            return;
+        }
+        dataSources = bindResult.get();
 
         if (dataSources == null || dataSources.size() == 0)
             return;
 
-        registry.removeBeanDefinition("WillRemovedTempJdbcTemplate");
         boolean primary = true;
         for (Map.Entry<String, DataSourceProperties> entry : dataSources.entrySet()) {
             String unitName = entry.getKey();
             LOGGER.info("Initialized DataSource: {}.", unitName + "DataSource");
-            registerDataSourcePropertiesBeanDefinition(registry, unitName, primary);
+            registerDataSourceProperties(registry, unitName, primary);
             registerDataSource(registry, unitName, primary);
             registerJdbcTemplate(registry, unitName, primary);
+            registerSqlDataSourceScriptDatabaseInitializer(registry, unitName, primary);
             primary = false;
         }
     }
 
-    private void registerDataSource(@NonNull BeanDefinitionRegistry registry, String unitName,
-            boolean primary) {
+    private void registerDataSource(@NonNull BeanDefinitionRegistry registry,
+            @NonNull String unitName, boolean primary) {
         registerBean(registry, "dataSource", unitName, "DataSource", primary);
     }
 
-    private void registerDataSourcePropertiesBeanDefinition(@NonNull BeanDefinitionRegistry registry,
-            String unitName, boolean primary) {
+    private void registerDataSourceProperties(@NonNull BeanDefinitionRegistry registry,
+            @NonNull String unitName, boolean primary) {
         registerBean(registry, "dataSourceProperties", unitName, "DataSourceProperties", primary);
     }
 
-    private void registerJdbcTemplate(@NonNull BeanDefinitionRegistry registry, String unitName,
+    private void registerJdbcTemplate(@NonNull BeanDefinitionRegistry registry, @NonNull String unitName,
             boolean primary) {
         registerBean(registry, "jdbcTemplate", unitName, "JdbcTemplate", primary);
+    }
+
+    private void registerSqlDataSourceScriptDatabaseInitializer(@NonNull BeanDefinitionRegistry registry,
+            @NonNull String unitName,
+            boolean primary) {
+
+        Binder binder = Binder.get(environment);
+        BindResult<SqlInitializationProperties> bindResult = binder
+                .bind("spring.datasources." + unitName + ".initialization-sql",
+                        Bindable.of(SqlInitializationProperties.class));
+        if (!bindResult.isBound()) {
+            return;
+        }
+        SqlInitializationProperties properties = bindResult.get();
+
+        GenericBeanDefinition beanDefinition = createBasBeanDefinition(registry,
+                "sqlDataSourceScriptDatabaseInitializer", unitName,
+                "SqlDataSourceScriptDatabaseInitializer", primary);
+        beanDefinition.getConstructorArgumentValues().addGenericArgumentValue(properties);
+        registry.registerBeanDefinition(unitName + "SqlDataSourceScriptDatabaseInitializer", beanDefinition);
     }
 
     public DataSourceProperties dataSourceProperties(String name) {
@@ -109,6 +153,24 @@ public class DataSourceBeansBuilder
         return new JdbcTemplate(dataSource);
     }
 
+    public SqlDataSourceScriptDatabaseInitializer sqlDataSourceScriptDatabaseInitializer(String unit,
+            SqlInitializationProperties properties) {
+        DataSource dataSource = this.applicationContext.getBean(unit + "DataSource", DataSource.class);
+        return new SqlDataSourceScriptDatabaseInitializer(
+                determineDataSource(dataSource, properties.getUsername(), properties.getPassword()), properties);
+    }
+
+    private static DataSource determineDataSource(DataSource dataSource, String username, String password) {
+        if (StringUtils.hasText(username) && StringUtils.hasText(password)) {
+            return DataSourceBuilder.derivedFrom(dataSource)
+                    .username(username)
+                    .password(password)
+                    .type(SimpleDriverDataSource.class)
+                    .build();
+        }
+        return dataSource;
+    }
+
     @Override
     public void setEnvironment(@NonNull Environment environment) {
         this.environment = environment;
@@ -120,6 +182,14 @@ public class DataSourceBeansBuilder
     }
 
     private void registerBean(@NonNull BeanDefinitionRegistry registry, String factoryMethodName, String unit,
+            String postfix, boolean primary) {
+        GenericBeanDefinition beanDefinition = createBasBeanDefinition(registry, factoryMethodName, unit, postfix,
+                primary);
+        registry.registerBeanDefinition(unit + postfix, beanDefinition);
+    }
+
+    private GenericBeanDefinition createBasBeanDefinition(@NonNull BeanDefinitionRegistry registry,
+            String factoryMethodName, String unit,
             String postfix, boolean primary) {
         GenericBeanDefinition beanDefinition = new GenericBeanDefinition();
         beanDefinition.setFactoryBeanName(this.getClass().getName());
@@ -133,13 +203,25 @@ public class DataSourceBeansBuilder
         beanDefinition.setConstructorArgumentValues(constructorArgumentValues);
 
         beanDefinition.getQualifier(unit + postfix);
-        registry.registerBeanDefinition(unit + postfix, beanDefinition);
+        return beanDefinition;
     }
 
-    @Configuration
     static class WillRemovedTemporarilyBeans {
+
+        @Bean(name = "WillRemovedTempDataSourceScriptDatabaseInitializer")
+        SqlDataSourceScriptDatabaseInitializer dataSourceScriptDatabaseInitializer(DataSource dataSource) {
+            return null;
+        }
+
         @Bean(name = "WillRemovedTempJdbcTemplate")
+        @ConditionalOnMissingBean(value = JdbcTemplate.class)
         JdbcTemplate jdbcTemplate(DataSource dataSource) {
+            return null;
+        }
+
+        @Bean(name = "WillRemovedTempDataSource")
+        @ConditionalOnMissingBean(value = DataSource.class)
+        DataSource dataSource() {
             return null;
         }
     }
