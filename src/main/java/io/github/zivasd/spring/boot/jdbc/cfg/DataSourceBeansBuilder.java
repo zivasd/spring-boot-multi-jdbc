@@ -32,6 +32,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
 import org.springframework.lang.NonNull;
 import org.springframework.util.StringUtils;
@@ -46,20 +47,25 @@ public class DataSourceBeansBuilder
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DataSourceBeansBuilder.class);
 
+    private static final String DATASOURCE_PREFIX = "DataSource";
+
     private Map<String, DataSourceProperties> dataSources;
     private Environment environment;
     private ApplicationContext applicationContext;
 
     @Override
     public void postProcessBeanFactory(@NonNull ConfigurableListableBeanFactory beanFactory) throws BeansException {
-
+	/**
+	 * do nothing
+	 */
     }
 
     @Override
     public void postProcessBeanDefinitionRegistry(@NonNull BeanDefinitionRegistry registry) throws BeansException {
-        registry.removeBeanDefinition("WillRemovedTempJdbcTemplate");
-        registry.removeBeanDefinition("WillRemovedTempDataSource");
-        registry.removeBeanDefinition("WillRemovedTempDataSourceScriptDatabaseInitializer");
+        registry.removeBeanDefinition("willRemovedTempJdbcTemplate");
+        registry.removeBeanDefinition("willRemovedTempNamedParameterJdbcTemplate");
+        registry.removeBeanDefinition("willRemovedTempDataSource");
+        registry.removeBeanDefinition("willRemovedTempDataSourceScriptDatabaseInitializer");
 
         if (applicationContext.getBeanNamesForType(DataSource.class).length > 0) {
             return;
@@ -81,9 +87,10 @@ public class DataSourceBeansBuilder
         boolean primary = true;
         for (Map.Entry<String, DataSourceProperties> entry : dataSources.entrySet()) {
             String unitName = entry.getKey();
-            LOGGER.info("Initialized DataSource: {}.", unitName + "DataSource");
+            LOGGER.info("Initialized DataSource: {}{}.", unitName, DATASOURCE_PREFIX);
             registerDataSourceProperties(registry, unitName, primary);
             registerDataSource(registry, unitName, primary);
+            registerNamedParameterJdbcTemplate(registry, unitName, primary);
             registerJdbcTemplate(registry, unitName, primary);
             registerSqlDataSourceScriptDatabaseInitializer(registry, unitName, primary);
             primary = false;
@@ -92,12 +99,17 @@ public class DataSourceBeansBuilder
 
     private void registerDataSource(@NonNull BeanDefinitionRegistry registry,
             @NonNull String unitName, boolean primary) {
-        registerBean(registry, "dataSource", unitName, "DataSource", primary);
+        registerBean(registry, "dataSource", unitName, DATASOURCE_PREFIX, primary);
     }
 
     private void registerDataSourceProperties(@NonNull BeanDefinitionRegistry registry,
             @NonNull String unitName, boolean primary) {
         registerBean(registry, "dataSourceProperties", unitName, "DataSourceProperties", primary);
+    }
+
+    private void registerNamedParameterJdbcTemplate(@NonNull BeanDefinitionRegistry registry, @NonNull String unitName,
+            boolean primary) {
+        registerBean(registry, "namedParameterJdbcTemplate", unitName, "NamedParameterJdbcTemplate", primary);
     }
 
     private void registerJdbcTemplate(@NonNull BeanDefinitionRegistry registry, @NonNull String unitName,
@@ -118,7 +130,7 @@ public class DataSourceBeansBuilder
         }
         SqlInitializationProperties properties = bindResult.get();
 
-        GenericBeanDefinition beanDefinition = createBasBeanDefinition(registry,
+        GenericBeanDefinition beanDefinition = createBasBeanDefinition(
                 "sqlDataSourceScriptDatabaseInitializer", unitName,
                 "SqlDataSourceScriptDatabaseInitializer", primary);
         beanDefinition.getConstructorArgumentValues().addGenericArgumentValue(properties);
@@ -149,13 +161,18 @@ public class DataSourceBeansBuilder
     }
 
     public JdbcTemplate jdbcTemplate(String unit) {
-        DataSource dataSource = this.applicationContext.getBean(unit + "DataSource", DataSource.class);
-        return new JdbcTemplate(dataSource);
+	NamedParameterJdbcTemplate template = this.applicationContext.getBean(unit + "NamedParameterJdbcTemplate", NamedParameterJdbcTemplate.class);
+	return template.getJdbcTemplate();
     }
+
+	public NamedParameterJdbcTemplate namedParameterJdbcTemplate(String unit) {
+		DataSource dataSource = this.applicationContext.getBean(unit + DATASOURCE_PREFIX, DataSource.class);
+		return new NamedParameterJdbcTemplate(dataSource);
+	}
 
     public SqlDataSourceScriptDatabaseInitializer sqlDataSourceScriptDatabaseInitializer(String unit,
             SqlInitializationProperties properties) {
-        DataSource dataSource = this.applicationContext.getBean(unit + "DataSource", DataSource.class);
+        DataSource dataSource = this.applicationContext.getBean(unit + DATASOURCE_PREFIX, DataSource.class);
         return new SqlDataSourceScriptDatabaseInitializer(
                 determineDataSource(dataSource, properties.getUsername(), properties.getPassword()), properties);
     }
@@ -183,13 +200,12 @@ public class DataSourceBeansBuilder
 
     private void registerBean(@NonNull BeanDefinitionRegistry registry, String factoryMethodName, String unit,
             String postfix, boolean primary) {
-        GenericBeanDefinition beanDefinition = createBasBeanDefinition(registry, factoryMethodName, unit, postfix,
+        GenericBeanDefinition beanDefinition = createBasBeanDefinition(factoryMethodName, unit, postfix,
                 primary);
         registry.registerBeanDefinition(unit + postfix, beanDefinition);
     }
 
-    private GenericBeanDefinition createBasBeanDefinition(@NonNull BeanDefinitionRegistry registry,
-            String factoryMethodName, String unit,
+    private GenericBeanDefinition createBasBeanDefinition(String factoryMethodName, String unit,
             String postfix, boolean primary) {
         GenericBeanDefinition beanDefinition = new GenericBeanDefinition();
         beanDefinition.setFactoryBeanName(this.getClass().getName());
@@ -208,18 +224,24 @@ public class DataSourceBeansBuilder
 
     static class WillRemovedTemporarilyBeans {
 
-        @Bean(name = "WillRemovedTempDataSourceScriptDatabaseInitializer")
+        @Bean(name = "willRemovedTempDataSourceScriptDatabaseInitializer")
         SqlDataSourceScriptDatabaseInitializer dataSourceScriptDatabaseInitializer(DataSource dataSource) {
             return null;
         }
 
-        @Bean(name = "WillRemovedTempJdbcTemplate")
+        @Bean(name = "willRemovedTempJdbcTemplate")
         @ConditionalOnMissingBean(value = JdbcTemplate.class)
         JdbcTemplate jdbcTemplate(DataSource dataSource) {
             return null;
         }
 
-        @Bean(name = "WillRemovedTempDataSource")
+        @Bean(name = "willRemovedTempNamedParameterJdbcTemplate")
+        @ConditionalOnMissingBean(value = NamedParameterJdbcTemplate.class)
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate(DataSource dataSource) {
+            return null;
+        }
+
+        @Bean(name = "willRemovedTempDataSource")
         @ConditionalOnMissingBean(value = DataSource.class)
         DataSource dataSource() {
             return null;

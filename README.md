@@ -15,7 +15,7 @@ spring:
   application:
     name: sample
   datasources:
-    # DataSource bean name as primaryDataSource, similar to DataSourceProperties and JdbcTemplate.
+    # DataSource bean name as primaryDataSource, similar to DataSourceProperties, JdbcTemplate and NamedParameterJdbcTemplate.
     primary:
       type: com.mchange.v2.c3p0.ComboPooledDataSource
       driver-class-name: ${driverClass}
