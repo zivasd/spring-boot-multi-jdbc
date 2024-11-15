@@ -1,0 +1,10 @@
+{
+    "properties": [
+        {
+            "name": "spring.datasources",
+            "type": "java.util.Map<java.lang.String,org.springframework.boot.autoconfigure.jdbc.DataSourceProperties>",
+            "description": "mutiple JPA entities",
+            "required": false
+        }
+    ]
+}

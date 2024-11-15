@@ -1,0 +1,25 @@
+spring:
+  main:
+    allow-circular-references: false
+  application:
+    name: sample
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    default-property-inclusion: NON_NULL
+  mvc:
+    static-path-pattern: /**
+  datasources:
+    primary:
+      driver-class-name: org.h2.Driver
+      url: jdbc:h2:mem:testdb;
+      username: sa
+      password:
+    secondary:
+      driver-class-name: org.h2.Driver
+      url: jdbc:h2:mem:testdb2;
+      username: sa
+      password:      
+logging:
+  level:
+    root: info
