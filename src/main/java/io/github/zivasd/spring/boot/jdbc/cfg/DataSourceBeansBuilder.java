@@ -34,7 +34,6 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Primary;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -71,15 +70,14 @@ public class DataSourceBeansBuilder
 
     @Override
     public void postProcessBeanDefinitionRegistry(@NonNull BeanDefinitionRegistry registry) throws BeansException {
-        registry.removeBeanDefinition(WillRemovedTemporarilyBeans.REMOVED_JDBC_TEMPLATE);
-        registry.removeBeanDefinition(WillRemovedTemporarilyBeans.REMOVED_NAMEDJDBC_TEMPLATE);
-        registry.removeBeanDefinition(WillRemovedTemporarilyBeans.REMOVED_DATASOURCE1);
-        registry.removeBeanDefinition(WillRemovedTemporarilyBeans.REMOVED_DATASOURCE2);
-        registry.removeBeanDefinition(WillRemovedTemporarilyBeans.REMOVED_DATABASE_INITIALIZER);
-        registry.removeBeanDefinition(WillRemovedTemporarilyBeans.class.getName());
-        boolean doRegisterTM = registry.containsBeanDefinition(WillRemovedTemporarilyBeans.REMOVED_TRANSACTION_MANAGER);
+        registry.removeBeanDefinition(REMOVED_JDBC_TEMPLATE);
+        registry.removeBeanDefinition(REMOVED_NAMEDJDBC_TEMPLATE);
+        registry.removeBeanDefinition(REMOVED_DATASOURCE1);
+        registry.removeBeanDefinition(REMOVED_DATASOURCE2);
+        registry.removeBeanDefinition(REMOVED_DATABASE_INITIALIZER);
+        boolean doRegisterTM = registry.containsBeanDefinition(REMOVED_TRANSACTION_MANAGER);
         if (doRegisterTM)
-            registry.removeBeanDefinition(WillRemovedTemporarilyBeans.REMOVED_TRANSACTION_MANAGER);
+            registry.removeBeanDefinition(REMOVED_TRANSACTION_MANAGER);
 
         if (applicationContext.getBeanNamesForType(DataSource.class).length > 0) {
             return;
@@ -259,51 +257,48 @@ public class DataSourceBeansBuilder
         return beanDefinition;
     }
 
-    static class WillRemovedTemporarilyBeans {
-        static final String REMOVED_DATABASE_INITIALIZER = "willRemovedTempDataSourceScriptDatabaseInitializer";
-        static final String REMOVED_JDBC_TEMPLATE = "willRemovedTempJdbcTemplate";
-        static final String REMOVED_NAMEDJDBC_TEMPLATE = "willRemovedTempNamedParameterJdbcTemplate";
-        static final String REMOVED_TRANSACTION_MANAGER = "willRemovedTransactionManager";
-        static final String REMOVED_DATASOURCE1 = "willRemovedTempDataSource1";
-        static final String REMOVED_DATASOURCE2 = "willRemovedTempDataSource2";
-
-        @Bean(name = REMOVED_DATABASE_INITIALIZER)
-        SqlDataSourceScriptDatabaseInitializer dataSourceScriptDatabaseInitializer(DataSource dataSource) {
-            return null;
-        }
-
-        @Bean(name = REMOVED_JDBC_TEMPLATE)
-        @ConditionalOnMissingBean(value = JdbcTemplate.class)
-        JdbcTemplate jdbcTemplate(DataSource dataSource) {
-            return null;
-        }
-
-        @Bean(name = REMOVED_NAMEDJDBC_TEMPLATE)
-        @ConditionalOnMissingBean(value = NamedParameterJdbcTemplate.class)
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate(DataSource dataSource) {
-            return null;
-        }
-
-        @Bean(name = REMOVED_TRANSACTION_MANAGER)
-        @ConditionalOnMissingBean(value = TransactionManager.class)
-        @ConditionalOnMissingClass(value = "org.springframework.orm.jpa.JpaVendorAdapter")
-        PlatformTransactionManager transactionManager(DataSource dataSource) {
-            return null;
-        }
-
-        @Bean(name = REMOVED_DATASOURCE1)
-        @Primary
-        @ConditionalOnMissingBean(value = DataSource.class)
-        DataSource dataSource1() {
-            return null;
-        }
-
-        @Bean(name = REMOVED_DATASOURCE2)
-        @ConditionalOnBean(name = REMOVED_DATASOURCE1)
-        DataSource dataSource2() {
-            return null;
-        }
+    @Bean(name = REMOVED_DATABASE_INITIALIZER)
+    SqlDataSourceScriptDatabaseInitializer dataSourceScriptDatabaseInitializer() {
+        return null;
     }
+
+    @Bean(name = REMOVED_JDBC_TEMPLATE)
+    @ConditionalOnMissingBean(value = JdbcTemplate.class)
+    JdbcTemplate jdbcTemplate() {
+        return null;
+    }
+
+    @Bean(name = REMOVED_NAMEDJDBC_TEMPLATE)
+    @ConditionalOnMissingBean(value = NamedParameterJdbcTemplate.class)
+    NamedParameterJdbcTemplate namedParameterJdbcTemplate() {
+        return null;
+    }
+
+    @Bean(name = REMOVED_DATASOURCE1)
+    @ConditionalOnMissingBean(value = DataSource.class)
+    DataSource dataSource1() {
+        return null;
+    }
+
+    @Bean(name = REMOVED_DATASOURCE2)
+    @ConditionalOnBean(name = REMOVED_DATASOURCE1)
+    DataSource dataSource2() {
+        return null;
+    }
+
+    @Bean(name = REMOVED_TRANSACTION_MANAGER)
+    @ConditionalOnMissingBean(value = TransactionManager.class)
+    @ConditionalOnMissingClass(value = "org.springframework.orm.jpa.JpaVendorAdapter")
+    PlatformTransactionManager transactionManager() {
+        return null;
+    }
+
+    static final String REMOVED_DATABASE_INITIALIZER = "willRemovedTempDataSourceScriptDatabaseInitializer";
+    static final String REMOVED_JDBC_TEMPLATE = "willRemovedTempJdbcTemplate";
+    static final String REMOVED_NAMEDJDBC_TEMPLATE = "willRemovedTempNamedParameterJdbcTemplate";
+    static final String REMOVED_TRANSACTION_MANAGER = "willRemovedTransactionManager";
+    static final String REMOVED_DATASOURCE1 = "willRemovedTempDataSource1";
+    static final String REMOVED_DATASOURCE2 = "willRemovedTempDataSource2";
 
     private static final Map<String, String> DATASOURCE_POOLS = new HashMap<>();
     static {
