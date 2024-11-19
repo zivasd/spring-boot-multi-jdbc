@@ -24,6 +24,7 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.autoconfigure.sql.init.SqlDataSourceScriptDatabaseInitializer;
 import org.springframework.boot.autoconfigure.sql.init.SqlInitializationProperties;
+import org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration;
 import org.springframework.boot.autoconfigure.transaction.TransactionManagerCustomizers;
 import org.springframework.boot.context.properties.bind.BindResult;
 import org.springframework.boot.context.properties.bind.Bindable;
@@ -43,10 +44,11 @@ import org.springframework.jdbc.support.JdbcTransactionManager;
 import org.springframework.lang.NonNull;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 
 @AutoConfiguration(value = "io.github.zivasd.spring.boot.jdbc.cfg.DataSourceBeansBuilder", before = {
-        DataSourceAutoConfiguration.class })
+        DataSourceAutoConfiguration.class, TransactionAutoConfiguration.class })
 @ComponentScan({ "io.github.zivasd.spring.boot.jdbc.cfg" })
 @ConditionalOnClass({ DataSource.class, JdbcTemplate.class })
 @ConditionalOnMissingBean(value = { DataSource.class, JdbcTemplate.class }, type = "io.r2dbc.spi.ConnectionFactory")
@@ -75,9 +77,11 @@ public class DataSourceBeansBuilder
         registry.removeBeanDefinition(REMOVED_DATASOURCE1);
         registry.removeBeanDefinition(REMOVED_DATASOURCE2);
         registry.removeBeanDefinition(REMOVED_DATABASE_INITIALIZER);
-        boolean doRegisterTM = registry.containsBeanDefinition(REMOVED_TRANSACTION_MANAGER);
-        if (doRegisterTM)
-            registry.removeBeanDefinition(REMOVED_TRANSACTION_MANAGER);
+        boolean doRegisterTM = registry.containsBeanDefinition(REMOVED_TRANSACTION_MANAGER1);
+        if (doRegisterTM) {
+            registry.removeBeanDefinition(REMOVED_TRANSACTION_MANAGER1);
+            registry.removeBeanDefinition(REMOVED_TRANSACTION_MANAGER2);
+        }
 
         if (applicationContext.getBeanNamesForType(DataSource.class).length > 0) {
             return;
@@ -105,8 +109,10 @@ public class DataSourceBeansBuilder
             registerNamedParameterJdbcTemplate(registry, unitName, primary);
             registerJdbcTemplate(registry, unitName, primary);
             registerSqlDataSourceScriptDatabaseInitializer(registry, unitName, primary);
-            if (doRegisterTM)
+            if (doRegisterTM) {
                 registerTransactionManager(registry, unitName, primary);
+                registerTransactionTemplate(registry, unitName, primary);
+            }
             primary = false;
         }
     }
@@ -134,6 +140,11 @@ public class DataSourceBeansBuilder
     private void registerTransactionManager(@NonNull BeanDefinitionRegistry registry, @NonNull String unitName,
             boolean primary) {
         registerBean(registry, "transactionManager", unitName, "TransactionManager", primary);
+    }
+
+    private void registerTransactionTemplate(@NonNull BeanDefinitionRegistry registry, @NonNull String unitName,
+            boolean primary) {
+        registerBean(registry, "transactionTemplate", unitName, "TransactionTemplate", primary);
     }
 
     private void registerSqlDataSourceScriptDatabaseInitializer(@NonNull BeanDefinitionRegistry registry,
@@ -177,6 +188,16 @@ public class DataSourceBeansBuilder
             return dataSource;
 
         return binder.bind(key, Bindable.ofInstance(dataSource)).get();
+    }
+
+    public TransactionTemplate transactionTemplate(String unit) {
+        PlatformTransactionManager transactionManager = this.applicationContext.getBean(unit + "TransactionManager",
+                PlatformTransactionManager.class);
+        return createTransactionTemplate(transactionManager);
+    }
+
+    private TransactionTemplate createTransactionTemplate(PlatformTransactionManager transactionManager) {
+        return new TransactionTemplate(transactionManager);
     }
 
     public PlatformTransactionManager transactionManager(String unit,
@@ -286,17 +307,24 @@ public class DataSourceBeansBuilder
         return null;
     }
 
-    @Bean(name = REMOVED_TRANSACTION_MANAGER)
+    @Bean(name = REMOVED_TRANSACTION_MANAGER1)
     @ConditionalOnMissingBean(value = TransactionManager.class)
     @ConditionalOnMissingClass(value = "org.springframework.orm.jpa.JpaVendorAdapter")
-    PlatformTransactionManager transactionManager() {
+    PlatformTransactionManager transactionManager1() {
+        return null;
+    }
+
+    @Bean(name = REMOVED_TRANSACTION_MANAGER2)
+    @ConditionalOnBean(name = REMOVED_TRANSACTION_MANAGER1)
+    PlatformTransactionManager transactionManager2() {
         return null;
     }
 
     static final String REMOVED_DATABASE_INITIALIZER = "willRemovedTempDataSourceScriptDatabaseInitializer";
     static final String REMOVED_JDBC_TEMPLATE = "willRemovedTempJdbcTemplate";
     static final String REMOVED_NAMEDJDBC_TEMPLATE = "willRemovedTempNamedParameterJdbcTemplate";
-    static final String REMOVED_TRANSACTION_MANAGER = "willRemovedTransactionManager";
+    static final String REMOVED_TRANSACTION_MANAGER1 = "willRemovedTransactionManager1";
+    static final String REMOVED_TRANSACTION_MANAGER2 = "willRemovedTransactionManager2";
     static final String REMOVED_DATASOURCE1 = "willRemovedTempDataSource1";
     static final String REMOVED_DATASOURCE2 = "willRemovedTempDataSource2";
 
