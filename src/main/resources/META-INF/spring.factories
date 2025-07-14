@@ -1,2 +1,3 @@
+org.springframework.data.repository.core.support.RepositoryFactorySupport=io.github.zivasd.spring.boot.jdbc.repository.support.JdbcRepositoryFactory
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   io.github.zivasd.spring.boot.jdbc.cfg.DataSourceBeansBuilder

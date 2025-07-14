@@ -38,6 +38,9 @@ class NormalTest {
 
     @BeforeAll
     void init() {
+        primaryOperations.execute("drop table if exists t_person");
+        secondaryOperations.execute("drop table if exists t_user");
+
         primaryOperations.execute("create table t_person (id varchar(64), name varchar(64))");
         primaryOperations.execute("insert into t_person (id, name) values('1','bob')");
         primaryOperations.execute("insert into t_person (id, name) values('2','tom')");
